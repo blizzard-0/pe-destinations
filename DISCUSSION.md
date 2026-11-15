@@ -82,6 +82,13 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Set up Vitest.** It runs TypeScript and ES modules without extra configuration, uses the same API as Jest, and is supported in the Next.js docs. The config maps the `@/` path alias so tests can import code the same way the app does.
 - **Infrastructure first, real tests later.** There's no code worth testing yet. I'll add tests next to the code that needs them in Sections 2 and 3 (API parameter validation and search logic) instead of writing placeholder tests now. `--passWithNoTests` is temporary and will be removed once the first test exists.
 
+### Continuous integration
+
+- **GitHub Actions runs format check, lint, typecheck, and tests** on every pull request and on every push to `main`, so these checks don't depend on anyone remembering to run them.
+- **Node version comes from `.nvmrc`**, so it's defined in one place. CI uses `npm ci` to install exactly what's in the lockfile.
+- **CI is expected to fail until Sections 2 and 3 are done.** Lint and typecheck report real bugs in the existing API and UI code, which I fix in those sections. I left them failing rather than disabling the checks.
+- **No `next build` step yet.** Typecheck already catches the same errors faster. I'll revisit this in Section 2, once the API reads from the database and it's clear whether the build needs a database connection.
+
 ## Section 2: Database & API
 
 ## Section 3: User Interface
