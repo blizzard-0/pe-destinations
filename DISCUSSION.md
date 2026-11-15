@@ -4,6 +4,37 @@
 
 _To be written once all sections are complete._
 
+## Running Locally
+
+The README is the original assignment brief, so I've left it untouched and documented the setup here instead.
+
+### Prerequisites
+
+- Node.js 24 (see `.nvmrc`)
+- Docker (runs the local PostgreSQL database)
+
+### Setup
+
+```bash
+cp .env.example .env    # Windows cmd: copy .env.example .env
+docker compose up -d    # start PostgreSQL
+npm ci                  # install exact dependency versions
+npm run dev             # http://localhost:3000
+```
+
+### Scripts
+
+| Script                 | Description                     |
+| ---------------------- | ------------------------------- |
+| `npm run dev`          | Start the development server    |
+| `npm run build`        | Create a production build       |
+| `npm run lint`         | Run ESLint                      |
+| `npm run typecheck`    | Run the TypeScript type checker |
+| `npm run format`       | Format all files with Prettier  |
+| `npm run format:check` | Check formatting (used in CI)   |
+| `npm test`             | Run the test suite once         |
+| `npm run test:watch`   | Run tests in watch mode         |
+
 ## Initial Assessment
 
 I started by reading through the whole codebase and running a type check before changing anything. I grouped the issues by impact, so the most serious problems get fixed first and the rest can be scoped to the time available.
