@@ -122,6 +122,11 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 ## Section 2: Database & API
 
+### Database tooling
+
+- **Typed the Drizzle config with `defineConfig`**, so typos in config keys are caught by TypeScript instead of failing silently. I also set the migrations folder (`out`) explicitly, since `migrate.js` depends on it.
+- **The config fails fast when `DATABASE_URL` is missing**, with an error message that says how to fix it, rather than passing `undefined` along and failing later with a confusing error.
+
 ## Section 3: User Interface
 
 ## Tradeoffs & Deliberate Omissions
