@@ -135,6 +135,9 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 - **`created_at` is now `timestamptz` and `NOT NULL`.** A plain `timestamp` stores wall-clock time with no time zone, so values become ambiguous as soon as the app and database run in different zones. `timestamptz` stores an exact moment, which is what Postgres itself recommends. The column was also nullable despite having a default, so TypeScript typed it as `Date | null`. I didn't add `updated_at` because nothing in the app updates rows yet.
 
+- **Unique constraint on `(name, country)`.** Nothing stopped the same destination from being inserted twice. Uniqueness is on the pair rather than the name alone, because different countries can have places with the same name (for example, Córdoba in Spain and in Argentina). It also lets the seed upsert instead of wiping the table first.
+- **No check constraints.** I wanted the database to reject negative budgets and visitor counts, but the installed `drizzle-kit` (0.23) doesn't generate check constraints, so they would be silently left out of migrations. I validate these values in application code instead and list upgrading Drizzle under future work.
+
 ## Section 3: User Interface
 
 ## Tradeoffs & Deliberate Omissions
@@ -144,6 +147,8 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 ## What I'd Do With More Time
 
 - **Add a production `Dockerfile`** using Next.js standalone output and a multi-stage build, to produce a small image for deployment.
+
+- **Upgrade Drizzle** to a version whose migration generator supports check constraints, and move numeric validation (non-negative budget and visitor counts) into the database.
 
 - **Upgrade to Next.js 15+ and React 19.** I kept the project on Next 14 because a major upgrade brings breaking changes (async request APIs, different caching defaults) that are too risky for the time available. I only applied the patch-level update.
 - **Upgrade to ESLint 9.** ESLint 8 is no longer supported, but moving to ESLint 9 means rewriting the config in the new flat config format.
