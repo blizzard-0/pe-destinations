@@ -70,6 +70,11 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Formatting has its own commit** (`style: format codebase with Prettier`), separate from tooling and logic changes, so reviewers can safely skip it.
 - **Enforced LF line endings with `.gitattributes`.** Git for Windows defaults to `core.autocrlf=true`, which converts files to CRLF on checkout. Prettier expects LF, so `format:check` would fail on Windows for files nobody actually changed. `* text=auto eol=lf` makes every checkout use LF, regardless of the developer's OS or personal git settings.
 
+### Linting
+
+- **Aligned `eslint-config-next` with `next`.** The config was pinned to 14.2.5 while `next` had resolved to 14.2.35. The two are released together, so their versions should match.
+- **Added `eslint-config-prettier`** so that ESLint handles code quality and Prettier handles formatting, without the two fighting over style rules. I didn't use `eslint-plugin-prettier`, since the Prettier team recommends against running Prettier as a lint rule.
+
 ## Section 2: Database & API
 
 ## Section 3: User Interface
@@ -77,3 +82,6 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 ## Tradeoffs & Deliberate Omissions
 
 ## What I'd Do With More Time
+
+- **Upgrade to Next.js 15+ and React 19.** I kept the project on Next 14 because a major upgrade brings breaking changes (async request APIs, different caching defaults) that are too risky for the time available. I only applied the patch-level update.
+- **Upgrade to ESLint 9.** ESLint 8 is no longer supported, but moving to ESLint 9 means rewriting the config in the new flat config format.
