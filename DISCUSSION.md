@@ -131,6 +131,8 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 - **`cost_level` is a Postgres enum** (`Budget`, `Moderate`, `Premium`, `Luxury`) instead of free text. The database now rejects typos and unknown values, which would otherwise silently drop out of filters. Enum values also sort in the order they're declared, so sorting by cost goes from cheapest to most expensive instead of alphabetically. Tradeoff: adding a new level requires a migration, which is acceptable since cost tiers rarely change.
 
+- **`activities` is a `text[]` array instead of untyped `jsonb`.** With `jsonb`, the database accepted any JSON value and TypeScript saw the column as `unknown`. A native array is type-checked by both, and "destinations offering X" is a simple containment query that can be indexed. I considered a separate `activities` table with a join table, which would keep activity names consistent, but it adds two tables and a join to every query, which is more than this dataset needs.
+
 ## Section 3: User Interface
 
 ## Tradeoffs & Deliberate Omissions
