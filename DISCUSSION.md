@@ -62,6 +62,7 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 ### Node version
 
 - **Pinned Node to 24 (current LTS)** with `.nvmrc` and `engines` in `package.json`. `.nvmrc` lets version managers like `nvm` and CI pick the right version automatically, and `engines` makes npm warn when someone installs with an unsupported version. I set the minimum to 24 because that's the only version I've actually run the project on.
+- **Updated `@types/node` from 20 to 24** so the type definitions match the Node version the project actually runs on. I found the mismatch when installing Vitest, which requires newer Node types. I resolved it by aligning the versions instead of forcing the install with `--legacy-peer-deps`, which would have hidden the problem.
 
 ### Formatting
 
