@@ -47,7 +47,7 @@ I started by reading through the whole codebase and running a type check before 
 
 ### P0 — Broken
 
-- The project doesn't type-check (20 errors in `page.tsx` and `seed/route.ts`), so `next build` fails and the app can't be deployed.
+- The project doesn't type-check (18 errors in `page.tsx` and `seed/route.ts`), so `next build` fails and the app can't be deployed.
 - `GET /api/destinations` never touches the database. It returns the seed array straight from the source file.
 - There are no migration files, and `migrate.js` points at a `drizzle/` folder that doesn't exist, so there is no way to create the schema.
 - Searching for almost anything crashes the page: `averageDailyBudget` is a number, and calling `.includes()` on it throws.
@@ -106,7 +106,7 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 - **Aligned `eslint-config-next` with `next`.** The config was pinned to 14.2.5 while `next` had resolved to 14.2.35. The two are released together, so their versions should match.
 - **Added `eslint-config-prettier`** so that ESLint handles code quality and Prettier handles formatting, without the two fighting over style rules. I didn't use `eslint-plugin-prettier`, since the Prettier team recommends against running Prettier as a lint rule.
-- **Added a `typecheck` script** (`tsc --noEmit`). `next dev` doesn't type-check, which is how the project ended up with 20 type errors that nobody noticed. `next build` does catch them, but it's slow because it also builds the app. A dedicated script gives a fast check to run locally and in CI. It currently fails on purpose: the errors are in the API and UI code, and I fix them in Sections 2 and 3.
+- **Added a `typecheck` script** (`tsc --noEmit`). `next dev` doesn't type-check, which is how the project ended up with 18 type errors that nobody noticed. `next build` does catch them, but it's slow because it also builds the app. A dedicated script gives a fast check to run locally and in CI. It currently fails on purpose: the errors are in the API and UI code, and I fix them in Sections 2 and 3.
 
 ### Testing
 
