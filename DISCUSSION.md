@@ -59,6 +59,10 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Named volume and healthcheck.** Data survives `docker compose down`. The healthcheck uses `pg_isready` to report when the database is actually ready to accept connections, not just when the container has started. This will also be useful in CI.
 - The credentials in `compose.yaml` are local development defaults, not secrets. The database is empty and only reachable from the developer's own machine.
 
+### Node version
+
+- **Pinned Node to 24 (current LTS)** with `.nvmrc` and `engines` in `package.json`. `.nvmrc` lets version managers like `nvm` and CI pick the right version automatically, and `engines` makes npm warn when someone installs with an unsupported version. I set the minimum to 24 because that's the only version I've actually run the project on.
+
 ## Section 2: Database & API
 
 ## Section 3: User Interface
