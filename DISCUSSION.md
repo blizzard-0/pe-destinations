@@ -74,6 +74,7 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 - **Aligned `eslint-config-next` with `next`.** The config was pinned to 14.2.5 while `next` had resolved to 14.2.35. The two are released together, so their versions should match.
 - **Added `eslint-config-prettier`** so that ESLint handles code quality and Prettier handles formatting, without the two fighting over style rules. I didn't use `eslint-plugin-prettier`, since the Prettier team recommends against running Prettier as a lint rule.
+- **Added a `typecheck` script** (`tsc --noEmit`). `next dev` doesn't type-check, which is how the project ended up with 20 type errors that nobody noticed. `next build` does catch them, but it's slow because it also builds the app. A dedicated script gives a fast check to run locally and in CI. It currently fails on purpose: the errors are in the API and UI code, and I fix them in Sections 2 and 3.
 
 ## Section 2: Database & API
 
