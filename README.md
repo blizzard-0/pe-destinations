@@ -1,4 +1,3 @@
-
 ## Guidelines
 
 - **Time** — Please limit yourself to 3–4 hours of focused work. We want to see what you can accomplish in a realistic window, not how many hours you can pour in.
@@ -61,6 +60,6 @@ When you are finished, please submit one of the following:
 2. A **link to your GitHub repo**
 
 Please send your submission to:
+
 - steve@projectexpedition.com
 - eunice@projectexpedition.com
-
