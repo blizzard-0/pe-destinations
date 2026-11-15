@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
   pgTable,
   pgEnum,
@@ -25,7 +24,9 @@ const destinations = pgTable("destinations", {
   activities: text("activities").array().notNull(),
   averageDailyBudget: integer("average_daily_budget").notNull(),
   annualVisitors: bigint("annual_visitors", { mode: "number" }).notNull(),
-  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export { costLevelEnum, destinations };
