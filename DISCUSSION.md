@@ -63,6 +63,13 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 - **Pinned Node to 24 (current LTS)** with `.nvmrc` and `engines` in `package.json`. `.nvmrc` lets version managers like `nvm` and CI pick the right version automatically, and `engines` makes npm warn when someone installs with an unsupported version. I set the minimum to 24 because that's the only version I've actually run the project on.
 
+### Formatting
+
+- **Added Prettier with its default settings.** The existing code already followed Prettier's default style, so keeping the defaults meant almost no churn, and anyone who knows Prettier already knows the conventions. Prettier is pinned to an exact version because even minor releases can format code slightly differently.
+- **`format` and `format:check` scripts.** Developers run `format` locally. `format:check` only reports problems and exits with an error, which is what CI will run.
+- **Formatting has its own commit** (`style: format codebase with Prettier`), separate from tooling and logic changes, so reviewers can safely skip it.
+- **Enforced LF line endings with `.gitattributes`.** Git for Windows defaults to `core.autocrlf=true`, which converts files to CRLF on checkout. Prettier expects LF, so `format:check` would fail on Windows for files nobody actually changed. `* text=auto eol=lf` makes every checkout use LF, regardless of the developer's OS or personal git settings.
+
 ## Section 2: Database & API
 
 ## Section 3: User Interface
