@@ -126,7 +126,11 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 ## Tradeoffs & Deliberate Omissions
 
+- **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
+
 ## What I'd Do With More Time
+
+- **Add a production `Dockerfile`** using Next.js standalone output and a multi-stage build, to produce a small image for deployment.
 
 - **Upgrade to Next.js 15+ and React 19.** I kept the project on Next 14 because a major upgrade brings breaking changes (async request APIs, different caching defaults) that are too risky for the time available. I only applied the patch-level update.
 - **Upgrade to ESLint 9.** ESLint 8 is no longer supported, but moving to ESLint 9 means rewriting the config in the new flat config format.
