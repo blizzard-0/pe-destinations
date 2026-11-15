@@ -77,6 +77,11 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Added `eslint-config-prettier`** so that ESLint handles code quality and Prettier handles formatting, without the two fighting over style rules. I didn't use `eslint-plugin-prettier`, since the Prettier team recommends against running Prettier as a lint rule.
 - **Added a `typecheck` script** (`tsc --noEmit`). `next dev` doesn't type-check, which is how the project ended up with 20 type errors that nobody noticed. `next build` does catch them, but it's slow because it also builds the app. A dedicated script gives a fast check to run locally and in CI. It currently fails on purpose: the errors are in the API and UI code, and I fix them in Sections 2 and 3.
 
+### Testing
+
+- **Set up Vitest.** It runs TypeScript and ES modules without extra configuration, uses the same API as Jest, and is supported in the Next.js docs. The config maps the `@/` path alias so tests can import code the same way the app does.
+- **Infrastructure first, real tests later.** There's no code worth testing yet. I'll add tests next to the code that needs them in Sections 2 and 3 (API parameter validation and search logic) instead of writing placeholder tests now. `--passWithNoTests` is temporary and will be removed once the first test exists.
+
 ## Section 2: Database & API
 
 ## Section 3: User Interface
