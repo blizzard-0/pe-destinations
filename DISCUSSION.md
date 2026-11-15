@@ -133,6 +133,8 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 - **`activities` is a `text[]` array instead of untyped `jsonb`.** With `jsonb`, the database accepted any JSON value and TypeScript saw the column as `unknown`. A native array is type-checked by both, and "destinations offering X" is a simple containment query that can be indexed. I considered a separate `activities` table with a join table, which would keep activity names consistent, but it adds two tables and a join to every query, which is more than this dataset needs.
 
+- **`created_at` is now `timestamptz` and `NOT NULL`.** A plain `timestamp` stores wall-clock time with no time zone, so values become ambiguous as soon as the app and database run in different zones. `timestamptz` stores an exact moment, which is what Postgres itself recommends. The column was also nullable despite having a default, so TypeScript typed it as `Date | null`. I didn't add `updated_at` because nothing in the app updates rows yet.
+
 ## Section 3: User Interface
 
 ## Tradeoffs & Deliberate Omissions
