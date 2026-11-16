@@ -19,21 +19,65 @@ The README is the original assignment brief, so I've left it untouched and docum
 cp .env.example .env    # Windows cmd: copy .env.example .env
 docker compose up -d    # start PostgreSQL
 npm ci                  # install exact dependency versions
+npm run migrate:up      # create the database schema
+npm run seed            # load sample destinations
 npm run dev             # http://localhost:3000
 ```
 
 ### Scripts
 
-| Script                 | Description                     |
-| ---------------------- | ------------------------------- |
-| `npm run dev`          | Start the development server    |
-| `npm run build`        | Create a production build       |
-| `npm run lint`         | Run ESLint                      |
-| `npm run typecheck`    | Run the TypeScript type checker |
-| `npm run format`       | Format all files with Prettier  |
-| `npm run format:check` | Check formatting (used in CI)   |
-| `npm test`             | Run the test suite once         |
-| `npm run test:watch`   | Run tests in watch mode         |
+| Script                 | Description                               |
+| ---------------------- | ----------------------------------------- |
+| `npm run dev`          | Start the development server              |
+| `npm run build`        | Create a production build                 |
+| `npm run lint`         | Run ESLint                                |
+| `npm run typecheck`    | Run the TypeScript type checker           |
+| `npm run format`       | Format all files with Prettier            |
+| `npm run format:check` | Check formatting (used in CI)             |
+| `npm test`             | Run the test suite once                   |
+| `npm run test:watch`   | Run tests in watch mode                   |
+| `npm run generate`     | Generate a migration from schema changes  |
+| `npm run migrate:up`   | Apply pending migrations                  |
+| `npm run seed`         | Load sample destinations (safe to re-run) |
+
+### API
+
+`GET /api/destinations` returns destinations from the database. All parameters are optional.
+
+| Parameter                | Description                                                      | Default |
+| ------------------------ | ---------------------------------------------------------------- | ------- |
+| `q`                      | Case-insensitive search in name, country, region, and activities |         |
+| `region`                 | Exact region, e.g. `Asia`                                        |         |
+| `costLevel`              | `Budget`, `Moderate`, `Premium`, or `Luxury`                     |         |
+| `activity`               | Exact activity, e.g. `Cultural Tours`                            |         |
+| `minBudget`, `maxBudget` | Average daily budget range in USD (whole numbers)                |         |
+| `sort`                   | `name`, `budget`, `visitors`, or `costLevel`                     | `name`  |
+| `order`                  | `asc` or `desc`                                                  | `asc`   |
+| `page`                   | Page number, starting at 1                                       | `1`     |
+| `pageSize`               | Results per page, up to 50                                       | `20`    |
+
+Example: `/api/destinations?region=Asia&sort=budget&order=desc&pageSize=5`
+
+```json
+{
+  "data": [
+    {
+      "id": 2,
+      "name": "Kyoto",
+      "country": "Japan",
+      "region": "Asia",
+      "costLevel": "Moderate",
+      "activities": ["Cultural Tours", "Historical Sightseeing"],
+      "averageDailyBudget": 180,
+      "annualVisitors": 5300000,
+      "createdAt": "2026-11-16T10:00:00.000Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 5, "total": 3, "totalPages": 1 }
+}
+```
+
+Invalid parameters return `400` with `{ "error": { "message": "...", "issues": [{ "path": "...", "message": "..." }] } }`. Unexpected errors return `500` with a generic message.
 
 ## Initial Assessment
 
@@ -80,7 +124,7 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 ### Environment variables
 
-- **Ignored `.env` before the first commit.** The original `.gitignore` only covered `.env*.local`, so `.env` itself would have been committed. Right now it only contains a commented-out placeholder, but this is where the real `DATABASE_URL`, including the database password, will go. I fixed this before the first commit because once a file is in git history, deleting it later doesn't remove it from older commits. This is the only change included in the baseline commit, since it had to be in place before anything was committed.
+- **Ignored `.env` before the first commit.** The original `.gitignore` only covered `.env*.local`, so `.env` itself would have been committed. At the time it only contained a commented-out placeholder, but this is where the real `DATABASE_URL`, including the database password, goes. I fixed this before the first commit because once a file is in git history, deleting it later doesn't remove it from older commits. This is the only change included in the baseline commit, since it had to be in place before anything was committed.
 - **Added `.env.example`.** With `.env` no longer tracked, this file documents which variables the app needs and shows the expected format with safe local defaults. Getting set up locally is just `cp .env.example .env`.
 
 ### Local database
@@ -88,7 +132,7 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **PostgreSQL runs in Docker Compose.** `docker compose up -d` starts Postgres with the user, password, and database already matching `.env.example`. Anyone can get a working database with one command instead of installing and configuring Postgres by hand.
 - **Pinned to `postgres:17-alpine`.** Pinning the major version keeps everyone on the same Postgres version. I chose 17 over 18 because the official 18 image changes how the data directory is laid out, which adds setup complexity for no benefit here.
 - **Named volume and healthcheck.** Data survives `docker compose down`. The healthcheck uses `pg_isready` to report when the database is actually ready to accept connections, not just when the container has started. This will also be useful in CI.
-- The credentials in `compose.yaml` are local development defaults, not secrets. The database is empty and only reachable from the developer's own machine.
+- **The credentials in `compose.yaml` are not secrets.** They're local development defaults for an empty database that's only reachable from the developer's own machine.
 
 ### Node version
 
@@ -122,6 +166,50 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 ## Section 2: Database & API
 
+### Database tooling
+
+- **Typed the Drizzle config with `defineConfig`**, so typos in config keys are caught by TypeScript instead of failing silently. I also set the migrations folder (`out`) explicitly, since `migrate.js` depends on it.
+- **The config fails fast when `DATABASE_URL` is missing**, with an error message that says how to fix it, rather than passing `undefined` along and failing later with a confusing error.
+- **The migration script no longer logs `DATABASE_URL`.** It was printing the full connection string, password included, which ends up in log aggregators in production. The script also couldn't read `.env`, because plain `node` doesn't load it. It now uses Node's built-in `--env-file-if-exists`, which loads `.env` locally and is a no-op in CI and production, where variables come from the environment. No `dotenv` dependency needed.
+- **Removed the fake database client.** When `DATABASE_URL` was missing, `db/index.ts` returned a stub that answered every query with an empty array, so the app looked like it simply had no destinations instead of failing. It now throws on startup with a clear message, the same way the Drizzle config and migration script do. This also fixed two type errors, since `db` is no longer a union with the stub.
+- **Reused the connection pool across hot reloads.** In development, Next.js re-runs modules on every save, and each run opened a new connection pool without closing the old one, which eventually hits Postgres's connection limit. The pool is now cached on `globalThis` in development.
+
+### Schema
+
+- **`cost_level` is a Postgres enum** (`Budget`, `Moderate`, `Premium`, `Luxury`) instead of free text. The database now rejects typos and unknown values, which would otherwise silently drop out of filters. Enum values also sort in the order they're declared, so sorting by cost goes from cheapest to most expensive instead of alphabetically. Tradeoff: adding a new level requires a migration, which is acceptable since cost tiers rarely change.
+- **`activities` is a `text[]` array instead of untyped `jsonb`.** With `jsonb`, the database accepted any JSON value and TypeScript saw the column as `unknown`. A native array is type-checked by both, and "destinations offering X" is a simple containment query that can be indexed. I considered a separate `activities` table with a join table, which would keep activity names consistent, but it adds two tables and a join to every query, which is more than this dataset needs.
+- **`created_at` is now `timestamptz` and `NOT NULL`.** A plain `timestamp` stores wall-clock time with no time zone, so values become ambiguous as soon as the app and database run in different zones. `timestamptz` stores an exact moment, which is what Postgres itself recommends. The column was also nullable despite having a default, so TypeScript typed it as `Date | null`. I didn't add `updated_at` because nothing in the app updates rows yet.
+- **Unique constraint on `(name, country)`.** Nothing stopped the same destination from being inserted twice. Uniqueness is on the pair rather than the name alone, because different countries can have places with the same name (for example, Córdoba in Spain and in Argentina). It also lets the seed upsert instead of wiping the table first.
+- **No check constraints.** I wanted the database to reject negative budgets and visitor counts, but the installed `drizzle-kit` (0.23) doesn't generate check constraints, so they would be silently left out of migrations. I validate these values in application code instead and list upgrading Drizzle under future work.
+- **Migrations are generated from the schema and committed** (`drizzle/`), including Drizzle's snapshot files, which it uses to work out what changed next time. Previously there were no migrations at all, so there was no way to create the table. I deliberately left indexes out of the initial migration. They should match the queries the API actually runs, so I add them in a separate migration once the API is designed.
+
+### Seed data
+
+- **Seed data is deterministic.** Activities used to be picked with `Math.random` every time the module loaded, so every environment had different data, tests couldn't rely on it, and destinations got nonsensical activities (the off-by-one also meant the last activity could never be picked). Each destination now has a fixed, realistic list drawn from the same set of activity names.
+- **Seed data is typed as `NewDestination[]`**, a type inferred from the Drizzle schema. A typo in `costLevel` is now a compile error rather than a database error. Exporting `Destination` and `NewDestination` from the schema also gives the API and UI a single source of truth for the data shape.
+- **Replaced `POST /api/seed` with an `npm run seed` script.** The endpoint deleted every row without authentication and would have been reachable in production. Seeding is a developer task, so it now runs from the command line, like migrations. The script upserts on `(name, country)`, so it's safe to run any number of times and updates existing rows instead of wiping the table. It doesn't remove destinations that were deleted from the seed file, which is fine for development data.
+- **TypeScript scripts run through `tsx`**, loaded with `node --import tsx`. Node itself still handles `--env-file-if-exists`, the same way as in the migration script.
+
+### API
+
+- **Query parameters are validated with Zod** before anything touches the database. Invalid input (`page=abc`, `costLevel=Cheap`, `pageSize=1000`, a `minBudget` above `maxBudget`) gets a `400` with a clear message instead of being silently ignored. Empty parameters such as `?region=` are treated as not sent, since that's what a cleared filter in the UI produces. `pageSize` is capped at 50 so a single request can't ask for the whole table.
+- **Allowed `costLevel` values come from the Drizzle enum**, so the database, the types, and the validation can't drift apart.
+- **Validation lives in its own module (`params.ts`) with unit tests.** These are the project's first tests, so `--passWithNoTests` is gone.
+- **Filtering and sorting happen in the database, not the browser.** The original page downloaded every destination and filtered in JavaScript, which doesn't scale. `q` is a case-insensitive search across name, country, region, and activities. The other filters are exact matches, combined with AND.
+- **Search input is escaped for `LIKE`.** `%` and `_` are wildcards in `ILIKE`, so searching for `%` would have matched everything. This isn't SQL injection (Drizzle sends values as parameters), but it's a correctness bug that's easy to miss.
+- **Sorting uses an allow-list of columns and always breaks ties by `id`**, so users can only sort by fields the API exposes, and paging through results never shows the same destination twice or skips one.
+- **The endpoint now reads from the database and returns `{ data, pagination }`.** The original route returned the hard-coded seed array, not the database. `pagination` includes `total` and `totalPages`, so the UI can render page controls without another request. The page of results and the total count run as two parallel queries with the same filters.
+- **Errors have a consistent shape.** Invalid parameters return `400` with a list of issues, so the client can show what's wrong. Unexpected failures return a generic `500`, and the details go to the server log instead of the response, because database errors can expose internal details.
+- **A page past the end returns `200` with an empty list, not `404`.** The request is valid; there are just no results on that page, the same as a filter that matches nothing.
+- **The route is explicitly `force-dynamic`.** In Next.js 14, a `GET` handler that doesn't read the request is cached at build time, so the original route would have served the same response forever. Reading the query string already opts out, but the explicit setting documents the intent and protects against that regression.
+
+### Indexes
+
+- **Indexes match the filters the API runs**, added in a second migration. `region` and `average_daily_budget` get B-tree indexes for the equality and range filters, and `activities` gets a GIN index, which is what Postgres needs for array containment (`@>`). Sorting by name already uses the index behind the `(name, country)` unique constraint.
+- **No index on `cost_level`.** It has only four values, so each one matches about a quarter of the table and Postgres would scan the table anyway. The index would only slow down writes.
+- **Free-text search (`q`) isn't indexed.** A `%term%` pattern can't use a B-tree index. At this size a sequential scan is fine; at scale I'd add a trigram index (`pg_trgm`) or use Postgres full-text search.
+- **With 15 rows, Postgres ignores these indexes and scans the table**, because that's cheaper. I checked with `EXPLAIN`, with sequential scans disabled, that the planner can use them, so they'll take effect as the data grows. On a large production table I'd use `CREATE INDEX CONCURRENTLY` to avoid blocking writes. Drizzle's migrator can't do that, because it runs migrations inside a transaction.
+
 ## Section 3: User Interface
 
 ## Tradeoffs & Deliberate Omissions
@@ -130,7 +218,9 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 ## What I'd Do With More Time
 
-- **Add a production `Dockerfile`** using Next.js standalone output and a multi-stage build, to produce a small image for deployment.
-
 - **Upgrade to Next.js 15+ and React 19.** I kept the project on Next 14 because a major upgrade brings breaking changes (async request APIs, different caching defaults) that are too risky for the time available. I only applied the patch-level update.
+- **Upgrade Drizzle** to a version whose migration generator supports check constraints, and move numeric validation (non-negative budget and visitor counts) into the database.
 - **Upgrade to ESLint 9.** ESLint 8 is no longer supported, but moving to ESLint 9 means rewriting the config in the new flat config format.
+- **Add a production `Dockerfile`** using Next.js standalone output and a multi-stage build, to produce a small image for deployment.
+- **Add integration tests for the API against a real Postgres database**, run in CI with a Postgres service container. The unit tests check the SQL conditions and parameters the API generates, and I tested the endpoint manually, but only a real database proves the queries return the right rows.
+- **Publish an OpenAPI spec for the API**, viewable with Swagger UI or a similar tool. I'd generate it from the Zod schema that already validates the parameters, so the documentation can't drift from the actual behavior the way the hand-written table in this document can.
