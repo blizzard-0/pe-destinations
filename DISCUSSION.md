@@ -138,6 +138,8 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Unique constraint on `(name, country)`.** Nothing stopped the same destination from being inserted twice. Uniqueness is on the pair rather than the name alone, because different countries can have places with the same name (for example, Córdoba in Spain and in Argentina). It also lets the seed upsert instead of wiping the table first.
 - **No check constraints.** I wanted the database to reject negative budgets and visitor counts, but the installed `drizzle-kit` (0.23) doesn't generate check constraints, so they would be silently left out of migrations. I validate these values in application code instead and list upgrading Drizzle under future work.
 
+- **Migrations are generated from the schema and committed** (`drizzle/`), including Drizzle's snapshot files, which it uses to work out what changed next time. Previously there were no migrations at all, so there was no way to create the table. I deliberately left indexes out of the initial migration. They should match the queries the API actually runs, so I add them in a separate migration once the API is designed.
+
 ## Section 3: User Interface
 
 ## Tradeoffs & Deliberate Omissions
