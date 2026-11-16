@@ -87,6 +87,10 @@ const DestinationSearch = ({
     updateQuery({ page: page > 1 ? String(page) : "" });
   };
 
+  const onPageSizeChange = (pageSize: number) => {
+    updateQuery({ pageSize: String(pageSize) });
+  };
+
   const onReset = () => {
     clearTimeout(searchTimeout.current);
     setSearchTerm("");
@@ -153,7 +157,11 @@ const DestinationSearch = ({
         <>
           <DestinationsTable destinations={destinations} />
           {pagination && (
-            <Pagination pagination={pagination} onPageChange={onPageChange} />
+            <Pagination
+              pagination={pagination}
+              onPageChange={onPageChange}
+              onPageSizeChange={onPageSizeChange}
+            />
           )}
         </>
       )}
