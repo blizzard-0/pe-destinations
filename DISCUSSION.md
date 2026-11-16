@@ -20,23 +20,25 @@ cp .env.example .env    # Windows cmd: copy .env.example .env
 docker compose up -d    # start PostgreSQL
 npm ci                  # install exact dependency versions
 npm run migrate:up      # create the database schema
+npm run seed            # load sample destinations
 npm run dev             # http://localhost:3000
 ```
 
 ### Scripts
 
-| Script                 | Description                              |
-| ---------------------- | ---------------------------------------- |
-| `npm run dev`          | Start the development server             |
-| `npm run build`        | Create a production build                |
-| `npm run lint`         | Run ESLint                               |
-| `npm run typecheck`    | Run the TypeScript type checker          |
-| `npm run format`       | Format all files with Prettier           |
-| `npm run format:check` | Check formatting (used in CI)            |
-| `npm test`             | Run the test suite once                  |
-| `npm run test:watch`   | Run tests in watch mode                  |
-| `npm run generate`     | Generate a migration from schema changes |
-| `npm run migrate:up`   | Apply pending migrations                 |
+| Script                 | Description                               |
+| ---------------------- | ----------------------------------------- |
+| `npm run dev`          | Start the development server              |
+| `npm run build`        | Create a production build                 |
+| `npm run lint`         | Run ESLint                                |
+| `npm run typecheck`    | Run the TypeScript type checker           |
+| `npm run format`       | Format all files with Prettier            |
+| `npm run format:check` | Check formatting (used in CI)             |
+| `npm test`             | Run the test suite once                   |
+| `npm run test:watch`   | Run tests in watch mode                   |
+| `npm run generate`     | Generate a migration from schema changes  |
+| `npm run migrate:up`   | Apply pending migrations                  |
+| `npm run seed`         | Load sample destinations (safe to re-run) |
 
 ## Initial Assessment
 
@@ -146,6 +148,8 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 - **Seed data is deterministic.** Activities used to be picked with `Math.random` every time the module loaded, so every environment had different data, tests couldn't rely on it, and destinations got nonsensical activities (the off-by-one also meant the last activity could never be picked). Each destination now has a fixed, realistic list drawn from the same set of activity names.
 - **Seed data is typed as `NewDestination[]`**, a type inferred from the Drizzle schema. A typo in `costLevel` is now a compile error rather than a database error. Exporting `Destination` and `NewDestination` from the schema also gives the API and UI a single source of truth for the data shape.
+- **Replaced `POST /api/seed` with an `npm run seed` script.** The endpoint deleted every row without authentication and would have been reachable in production. Seeding is a developer task, so it now runs from the command line, like migrations. The script upserts on `(name, country)`, so it's safe to run any number of times and updates existing rows instead of wiping the table. It doesn't remove destinations that were deleted from the seed file, which is fine for development data.
+- **TypeScript scripts run through `tsx`**, loaded with `node --import tsx`. Node itself still handles `--env-file-if-exists`, the same way as in the migration script.
 
 ## Section 3: User Interface
 
