@@ -156,6 +156,9 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Query parameters are validated with Zod** before anything touches the database. Invalid input (`page=abc`, `costLevel=Cheap`, `pageSize=1000`, a `minBudget` above `maxBudget`) gets a `400` with a clear message instead of being silently ignored. Empty parameters such as `?region=` are treated as not sent, since that's what a cleared filter in the UI produces. `pageSize` is capped at 50 so a single request can't ask for the whole table.
 - **Allowed `costLevel` values come from the Drizzle enum**, so the database, the types, and the validation can't drift apart.
 - **Validation lives in its own module (`params.ts`) with unit tests.** These are the project's first tests, so `--passWithNoTests` is gone.
+- **Filtering and sorting happen in the database, not the browser.** The original page downloaded every destination and filtered in JavaScript, which doesn't scale. `q` is a case-insensitive search across name, country, region, and activities. The other filters are exact matches, combined with AND.
+- **Search input is escaped for `LIKE`.** `%` and `_` are wildcards in `ILIKE`, so searching for `%` would have matched everything. This isn't SQL injection (Drizzle sends values as parameters), but it's a correctness bug that's easy to miss.
+- **Sorting uses an allow-list of columns and always breaks ties by `id`**, so users can only sort by fields the API exposes, and paging through results never shows the same destination twice or skips one.
 
 ## Section 3: User Interface
 
