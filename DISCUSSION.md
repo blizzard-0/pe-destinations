@@ -266,6 +266,11 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **The table scrolls horizontally on small screens** instead of stretching the whole page.
 - **Replaced the template's placeholder page title and description.**
 
+### Continuous integration
+
+- **CI now runs `next build`**, which I deferred in Section 1. A type check doesn't catch everything the build does, such as a page that fails while Next.js collects page data, and the build is the closest check to a real deployment.
+- **The build step gets a placeholder `DATABASE_URL`.** The page and the API import the database module, which throws when the variable is missing. `postgres.js` only connects on the first query and both routes are dynamic, so the build never touches a database. I confirmed this by building a clean checkout with a URL that points at nothing. The value isn't secret, so it lives in the workflow file rather than in CI secrets.
+
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
