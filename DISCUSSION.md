@@ -220,6 +220,12 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Reset now clears the input**, not just the results. The input was uncontrolled, so the old term stayed in the box. It's now a controlled input driven by React state.
 - **Fixed invalid table markup and missing `key` props.** Header cells weren't wrapped in a `<tr>`, which is invalid HTML and causes hydration warnings. I also removed leftover `console.log` calls. With these fixes, the project passes type checking and linting for the first time, so CI is green.
 
+### Search
+
+- **Search runs on the server through the API** instead of filtering a full copy of the data in the browser. It's now case-insensitive and matches partial activity names (`surf` finds "Surfing"), and the browser only downloads the results it shows. There's also a single search implementation, so the page and the API can't disagree.
+- **Requests are debounced by 300 ms**, so typing "barcelona" sends one request instead of nine. The initial load and Reset aren't delayed.
+- **Outdated requests are cancelled with `AbortController`.** Without this, a slow response for an earlier term could arrive after a newer one and replace the results with the wrong list.
+
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
