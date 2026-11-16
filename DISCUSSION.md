@@ -149,6 +149,11 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 - **Migrations are generated from the schema and committed** (`drizzle/`), including Drizzle's snapshot files, which it uses to work out what changed next time. Previously there were no migrations at all, so there was no way to create the table. I deliberately left indexes out of the initial migration. They should match the queries the API actually runs, so I add them in a separate migration once the API is designed.
 
+### Seed data
+
+- **Seed data is deterministic.** Activities used to be picked with `Math.random` every time the module loaded, so every environment had different data, tests couldn't rely on it, and destinations got nonsensical activities (the off-by-one also meant the last activity could never be picked). Each destination now has a fixed, realistic list drawn from the same set of activity names.
+- **Seed data is typed as `NewDestination[]`**, a type inferred from the Drizzle schema. A typo in `costLevel` is now a compile error rather than a database error. Exporting `Destination` and `NewDestination` from the schema also gives the API and UI a single source of truth for the data shape.
+
 ## Section 3: User Interface
 
 ## Tradeoffs & Deliberate Omissions
