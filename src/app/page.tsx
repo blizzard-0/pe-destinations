@@ -63,32 +63,32 @@ export default function Home() {
       <br />
       <table>
         <thead>
-          <th>Name</th>
-          <th>Country</th>
-          <th>Region</th>
-          <th>Cost Level</th>
-          <th>Activities</th>
-          <th>Avg. Daily Budget</th>
-          <th>Annual Visitors</th>
+          <tr>
+            <th>Name</th>
+            <th>Country</th>
+            <th>Region</th>
+            <th>Cost Level</th>
+            <th>Activities</th>
+            <th>Avg. Daily Budget</th>
+            <th>Annual Visitors</th>
+          </tr>
         </thead>
         <tbody>
-          {filteredDestinations.map((destination) => {
-            return (
-              <tr>
-                <td>{destination.name}</td>
-                <td>{destination.country}</td>
-                <td>{destination.region}</td>
-                <td>{destination.costLevel}</td>
-                <td>
-                  {destination.activities.map((a) => (
-                    <div>{a}</div>
-                  ))}
-                </td>
-                <td>{destination.averageDailyBudget}</td>
-                <td>{destination.annualVisitors}</td>
-              </tr>
-            );
-          })}
+          {filteredDestinations.map((destination) => (
+            <tr key={destination.id}>
+              <td>{destination.name}</td>
+              <td>{destination.country}</td>
+              <td>{destination.region}</td>
+              <td>{destination.costLevel}</td>
+              <td>
+                {destination.activities.map((activity) => (
+                  <div key={activity}>{activity}</div>
+                ))}
+              </td>
+              <td>{destination.averageDailyBudget}</td>
+              <td>{destination.annualVisitors}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </main>
