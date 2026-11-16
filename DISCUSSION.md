@@ -164,6 +164,13 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **A page past the end returns `200` with an empty list, not `404`.** The request is valid; there are just no results on that page, the same as a filter that matches nothing.
 - **The route is explicitly `force-dynamic`.** In Next.js 14, a `GET` handler that doesn't read the request is cached at build time, so the original route would have served the same response forever. Reading the query string already opts out, but the explicit setting documents the intent and protects against that regression.
 
+### Indexes
+
+- **Indexes match the filters the API runs**, added in a second migration. `region` and `average_daily_budget` get B-tree indexes for the equality and range filters, and `activities` gets a GIN index, which is what Postgres needs for array containment (`@>`). Sorting by name already uses the index behind the `(name, country)` unique constraint.
+- **No index on `cost_level`.** It has only four values, so each one matches about a quarter of the table and Postgres would scan the table anyway. The index would only slow down writes.
+- **Free-text search (`q`) isn't indexed.** A `%term%` pattern can't use a B-tree index. At this size a sequential scan is fine; at scale I'd add a trigram index (`pg_trgm`) or use Postgres full-text search.
+- **With 15 rows, Postgres ignores these indexes and scans the table**, because that's cheaper. I checked with `EXPLAIN`, with sequential scans disabled, that the planner can use them, so they'll take effect as the data grows. On a large production table I'd use `CREATE INDEX CONCURRENTLY` to avoid blocking writes. Drizzle's migrator can't do that, because it runs migrations inside a transaction.
+
 ## Section 3: User Interface
 
 ## Tradeoffs & Deliberate Omissions
