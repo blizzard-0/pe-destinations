@@ -249,6 +249,7 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Added region and cost level filters**, combined with the search using AND and stored in the URL like the search. The options come from the source of truth: regions are loaded from the database in the server component, and cost levels come from the Drizzle enum, so a new region or level shows up without a code change.
 - **If loading regions fails, the page still renders** without region options, and the results area shows its own error with a retry button. A secondary dropdown shouldn't take down the whole page.
 - **The filter bar is an accessible form.** Every control has a visible label, the form is a `search` landmark, and pressing Enter doesn't reload the page. The loading message is an always-present live region with a fixed height, so screen readers announce it reliably and the table doesn't jump.
+- **"Clear filters" is disabled when there's nothing to clear**, including while a search is still being typed but not yet applied. It stays in place rather than disappearing, so the form doesn't shift.
 - **New UI is styled with Tailwind**, which was already installed but unused, instead of inline styles.
 
 ### Sorting and pagination
