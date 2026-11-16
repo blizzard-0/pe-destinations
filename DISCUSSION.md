@@ -255,6 +255,7 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 - **Sorting is a single dropdown** with options like "Daily budget (high to low)" instead of separate field and direction controls. It's easier to scan and maps directly onto the API's `sort` and `order` parameters. Sorting by cost level follows the enum order, from Budget to Luxury.
 - **Pagination uses Previous and Next buttons with "Showing 1–20 of 45"**, based on the `total` and `totalPages` the API returns. Changing the search, a filter, or the sort goes back to page 1. Default values (page 1, name A–Z) are left out of the URL to keep it short.
+- **Users can choose 10, 20, or 50 results per page**, matching the API's cap of 50. With only 15 seeded destinations, the default of 20 fits on one page, so this is also the easiest way to see pagination working. The selected value comes from the API response rather than a default hard-coded in the UI.
 - **A page past the end of the results**, such as an old link after the data changed, shows a link back to the first page instead of claiming that nothing matches.
 
 ## Tradeoffs & Deliberate Omissions
