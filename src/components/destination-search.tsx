@@ -1,32 +1,68 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import { DestinationsTable } from "@/components/destinations-table";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useDestinations } from "@/hooks/use-destinations";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-const DestinationSearch = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+type DestinationSearchProps = {
+  initialQueryString: string;
+};
 
-  const q = searchTerm.trim();
-  // Load the full list right away; only wait while the user is typing.
-  const debouncedQ = useDebouncedValue(q, q ? SEARCH_DEBOUNCE_MS : 0);
+const DestinationSearch = ({ initialQueryString }: DestinationSearchProps) => {
+  // The query string is the single source of truth for what's shown.
+  const [queryString, setQueryString] = useState(initialQueryString);
+  const [searchTerm, setSearchTerm] = useState(
+    () => new URLSearchParams(initialQueryString).get("q") ?? "",
+  );
+  const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
-  const params = new URLSearchParams();
-  if (debouncedQ) {
-    params.set("q", debouncedQ);
-  }
-  const { destinations, status, retry } = useDestinations(params.toString());
+  const { destinations, status, retry } = useDestinations(queryString);
 
-  const onChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+  // Mirror the query in the URL, so results can be refreshed and shared.
+  useEffect(() => {
+    const url = queryString ? `?${queryString}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }, [queryString]);
+
+  // Don't run a pending search after the component is gone.
+  useEffect(() => () => clearTimeout(searchTimeout.current), []);
+
+  const updateQuery = (changes: Record<string, string>) => {
+    setQueryString((previous) => {
+      const params = new URLSearchParams(previous);
+      for (const [key, value] of Object.entries(changes)) {
+        if (value) {
+          params.set(key, value);
+        } else {
+          params.delete(key);
+        }
+      }
+      // Any change other than paging starts again from the first page.
+      if (!("page" in changes)) {
+        params.delete("page");
+      }
+      return params.toString();
+    });
+  };
+
+  const onSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(
+      () => updateQuery({ q: value.trim() }),
+      SEARCH_DEBOUNCE_MS,
+    );
   };
 
   const onReset = () => {
+    clearTimeout(searchTimeout.current);
     setSearchTerm("");
+    setQueryString("");
   };
 
   return (
@@ -39,7 +75,7 @@ const DestinationSearch = () => {
         <input
           style={{ border: "1px solid black" }}
           value={searchTerm}
-          onChange={onChange}
+          onChange={onSearchChange}
         />
         <button onClick={onReset}>Reset Search</button>
       </div>
@@ -57,7 +93,9 @@ const DestinationSearch = () => {
 
       {status === "success" && destinations.length === 0 && (
         <p>
-          {q ? "No destinations match your search." : "No destinations found."}
+          {queryString
+            ? "No destinations match your search."
+            : "No destinations found."}
         </p>
       )}
 
