@@ -251,6 +251,12 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **The filter bar is an accessible form.** Every control has a visible label, the form is a `search` landmark, and pressing Enter doesn't reload the page. The loading message is an always-present live region with a fixed height, so screen readers announce it reliably and the table doesn't jump.
 - **New UI is styled with Tailwind**, which was already installed but unused, instead of inline styles.
 
+### Sorting and pagination
+
+- **Sorting is a single dropdown** with options like "Daily budget (high to low)" instead of separate field and direction controls. It's easier to scan and maps directly onto the API's `sort` and `order` parameters. Sorting by cost level follows the enum order, from Budget to Luxury.
+- **Pagination uses Previous and Next buttons with "Showing 1–20 of 45"**, based on the `total` and `totalPages` the API returns. Changing the search, a filter, or the sort goes back to page 1. Default values (page 1, name A–Z) are left out of the URL to keep it short.
+- **A page past the end of the results**, such as an old link after the data changed, shows a link back to the first page instead of claiming that nothing matches.
+
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
