@@ -223,3 +223,4 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Upgrade to ESLint 9.** ESLint 8 is no longer supported, but moving to ESLint 9 means rewriting the config in the new flat config format.
 - **Add a production `Dockerfile`** using Next.js standalone output and a multi-stage build, to produce a small image for deployment.
 - **Add integration tests for the API against a real Postgres database**, run in CI with a Postgres service container. The unit tests check the SQL conditions and parameters the API generates, and I tested the endpoint manually, but only a real database proves the queries return the right rows.
+- **Publish an OpenAPI spec for the API**, viewable with Swagger UI or a similar tool. I'd generate it from the Zod schema that already validates the parameters, so the documentation can't drift from the actual behavior the way the hand-written table in this document can.
