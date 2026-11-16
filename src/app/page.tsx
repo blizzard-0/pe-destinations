@@ -9,9 +9,9 @@ export default function Home() {
   const [filteredDestinations, setFilteredDestinations] = useState<
     DestinationJson[]
   >([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    console.log("fetching destinations...");
     fetch("/api/destinations").then((response) => {
       response.json().then((jsonResponse) => {
         setDestinations(jsonResponse.data);
@@ -21,27 +21,23 @@ export default function Home() {
   }, []);
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const searchTerm = e.target.value;
+    const term = e.target.value;
+    setSearchTerm(term);
 
-    document.getElementById("search-term").innerHTML = searchTerm;
-
-    console.log("filtering destinations...");
-    const filteredDestinations = destinations.filter((destination) => {
-      return (
-        destination.name.includes(searchTerm) ||
-        destination.country.includes(searchTerm) ||
-        destination.region.includes(searchTerm) ||
-        destination.costLevel.includes(searchTerm) ||
-        destination.activities.includes(searchTerm) ||
-        destination.averageDailyBudget.includes(searchTerm)
-      );
-    });
-
-    setFilteredDestinations(filteredDestinations);
+    setFilteredDestinations(
+      destinations.filter(
+        (destination) =>
+          destination.name.includes(term) ||
+          destination.country.includes(term) ||
+          destination.region.includes(term) ||
+          destination.costLevel.includes(term) ||
+          destination.activities.includes(term),
+      ),
+    );
   };
 
-  const onClick = () => {
-    console.log(destinations);
+  const onReset = () => {
+    setSearchTerm("");
     setFilteredDestinations(destinations);
   };
 
@@ -53,11 +49,16 @@ export default function Home() {
       <div>
         <p>Search</p>
         <p>
-          Searching for: <span id="search-term"></span>
+          Searching for: <span>{searchTerm}</span>
         </p>
-        <input style={{ border: "1px solid black" }} onChange={onChange} />
-        <button onClick={onClick}>Reset Search</button>
+        <input
+          style={{ border: "1px solid black" }}
+          value={searchTerm}
+          onChange={onChange}
+        />
+        <button onClick={onReset}>Reset Search</button>
       </div>
+
       <br />
       <br />
       <table>
