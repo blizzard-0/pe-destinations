@@ -2,7 +2,12 @@
 
 ## Overview
 
-_To be written once all sections are complete._
+I worked through the three sections in order, on one branch per section (`section-1-project-setup`, `section-2-database-api`, `section-3-ui`), each building on the previous one. Commits are small and focused, so the history reads as a step-by-step walkthrough. The sections below explain what I changed and why, in the same order.
+
+- **Section 1:** a local Postgres database in Docker, environment variables, a pinned Node version, Prettier, ESLint, type checking, Vitest, and GitHub Actions CI.
+- **Section 2:** a typed schema with an enum, an array column, constraints, and indexes; real migrations; an idempotent seed script in place of an unauthenticated endpoint; and an API that validates its input and searches, filters, sorts, and paginates in the database.
+- **Section 3:** fixed the XSS vulnerability, the search crash, and the invalid markup; moved search to the API; added filters, sorting, and pagination that live in the URL; and added loading, error, and empty states with accessible, responsive markup.
+- **Result:** the project now passes formatting, linting, type checking, tests, and a production build, and CI runs all of them.
 
 ## Running Locally
 
