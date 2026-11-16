@@ -83,7 +83,7 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 ### Environment variables
 
-- **Ignored `.env` before the first commit.** The original `.gitignore` only covered `.env*.local`, so `.env` itself would have been committed. Right now it only contains a commented-out placeholder, but this is where the real `DATABASE_URL`, including the database password, will go. I fixed this before the first commit because once a file is in git history, deleting it later doesn't remove it from older commits. This is the only change included in the baseline commit, since it had to be in place before anything was committed.
+- **Ignored `.env` before the first commit.** The original `.gitignore` only covered `.env*.local`, so `.env` itself would have been committed. At the time it only contained a commented-out placeholder, but this is where the real `DATABASE_URL`, including the database password, goes. I fixed this before the first commit because once a file is in git history, deleting it later doesn't remove it from older commits. This is the only change included in the baseline commit, since it had to be in place before anything was committed.
 - **Added `.env.example`.** With `.env` no longer tracked, this file documents which variables the app needs and shows the expected format with safe local defaults. Getting set up locally is just `cp .env.example .env`.
 
 ### Local database
@@ -91,7 +91,7 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **PostgreSQL runs in Docker Compose.** `docker compose up -d` starts Postgres with the user, password, and database already matching `.env.example`. Anyone can get a working database with one command instead of installing and configuring Postgres by hand.
 - **Pinned to `postgres:17-alpine`.** Pinning the major version keeps everyone on the same Postgres version. I chose 17 over 18 because the official 18 image changes how the data directory is laid out, which adds setup complexity for no benefit here.
 - **Named volume and healthcheck.** Data survives `docker compose down`. The healthcheck uses `pg_isready` to report when the database is actually ready to accept connections, not just when the container has started. This will also be useful in CI.
-- The credentials in `compose.yaml` are local development defaults, not secrets. The database is empty and only reachable from the developer's own machine.
+- **The credentials in `compose.yaml` are not secrets.** They're local development defaults for an empty database that's only reachable from the developer's own machine.
 
 ### Node version
 
@@ -128,25 +128,18 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 ### Database tooling
 
 - **Typed the Drizzle config with `defineConfig`**, so typos in config keys are caught by TypeScript instead of failing silently. I also set the migrations folder (`out`) explicitly, since `migrate.js` depends on it.
-
 - **The config fails fast when `DATABASE_URL` is missing**, with an error message that says how to fix it, rather than passing `undefined` along and failing later with a confusing error.
-
 - **The migration script no longer logs `DATABASE_URL`.** It was printing the full connection string, password included, which ends up in log aggregators in production. The script also couldn't read `.env`, because plain `node` doesn't load it. It now uses Node's built-in `--env-file-if-exists`, which loads `.env` locally and is a no-op in CI and production, where variables come from the environment. No `dotenv` dependency needed.
-
 - **Removed the fake database client.** When `DATABASE_URL` was missing, `db/index.ts` returned a stub that answered every query with an empty array, so the app looked like it simply had no destinations instead of failing. It now throws on startup with a clear message, the same way the Drizzle config and migration script do. This also fixed two type errors, since `db` is no longer a union with the stub.
 - **Reused the connection pool across hot reloads.** In development, Next.js re-runs modules on every save, and each run opened a new connection pool without closing the old one, which eventually hits Postgres's connection limit. The pool is now cached on `globalThis` in development.
 
 ### Schema
 
 - **`cost_level` is a Postgres enum** (`Budget`, `Moderate`, `Premium`, `Luxury`) instead of free text. The database now rejects typos and unknown values, which would otherwise silently drop out of filters. Enum values also sort in the order they're declared, so sorting by cost goes from cheapest to most expensive instead of alphabetically. Tradeoff: adding a new level requires a migration, which is acceptable since cost tiers rarely change.
-
 - **`activities` is a `text[]` array instead of untyped `jsonb`.** With `jsonb`, the database accepted any JSON value and TypeScript saw the column as `unknown`. A native array is type-checked by both, and "destinations offering X" is a simple containment query that can be indexed. I considered a separate `activities` table with a join table, which would keep activity names consistent, but it adds two tables and a join to every query, which is more than this dataset needs.
-
 - **`created_at` is now `timestamptz` and `NOT NULL`.** A plain `timestamp` stores wall-clock time with no time zone, so values become ambiguous as soon as the app and database run in different zones. `timestamptz` stores an exact moment, which is what Postgres itself recommends. The column was also nullable despite having a default, so TypeScript typed it as `Date | null`. I didn't add `updated_at` because nothing in the app updates rows yet.
-
 - **Unique constraint on `(name, country)`.** Nothing stopped the same destination from being inserted twice. Uniqueness is on the pair rather than the name alone, because different countries can have places with the same name (for example, Córdoba in Spain and in Argentina). It also lets the seed upsert instead of wiping the table first.
 - **No check constraints.** I wanted the database to reject negative budgets and visitor counts, but the installed `drizzle-kit` (0.23) doesn't generate check constraints, so they would be silently left out of migrations. I validate these values in application code instead and list upgrading Drizzle under future work.
-
 - **Migrations are generated from the schema and committed** (`drizzle/`), including Drizzle's snapshot files, which it uses to work out what changed next time. Previously there were no migrations at all, so there was no way to create the table. I deliberately left indexes out of the initial migration. They should match the queries the API actually runs, so I add them in a separate migration once the API is designed.
 
 ### Seed data
@@ -162,9 +155,7 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 ## What I'd Do With More Time
 
-- **Add a production `Dockerfile`** using Next.js standalone output and a multi-stage build, to produce a small image for deployment.
-
-- **Upgrade Drizzle** to a version whose migration generator supports check constraints, and move numeric validation (non-negative budget and visitor counts) into the database.
-
 - **Upgrade to Next.js 15+ and React 19.** I kept the project on Next 14 because a major upgrade brings breaking changes (async request APIs, different caching defaults) that are too risky for the time available. I only applied the patch-level update.
+- **Upgrade Drizzle** to a version whose migration generator supports check constraints, and move numeric validation (non-negative budget and visitor counts) into the database.
 - **Upgrade to ESLint 9.** ESLint 8 is no longer supported, but moving to ESLint 9 means rewriting the config in the new flat config format.
+- **Add a production `Dockerfile`** using Next.js standalone output and a multi-stage build, to produce a small image for deployment.
