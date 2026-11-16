@@ -212,6 +212,14 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 ## Section 3: User Interface
 
+### Bug fixes
+
+- **Typed the page with the API's response types.** `useState([])` was inferred as `never[]`, which caused most of the type errors and hid the real ones. With the state typed, TypeScript pointed straight at the actual bugs below. The page imports the types with `import type`, so no server code ends up in the browser bundle.
+- **Removed an XSS vulnerability.** The search term was written into the page with `innerHTML`, so typing `<img src=x onerror=alert(1)>` ran JavaScript. It's now rendered as React text, which is escaped automatically. This matters even more once the search term lives in the URL, where it could be sent to someone else as a link.
+- **Fixed search breaking on most terms.** The filter called `.includes()` on `averageDailyBudget`, which is a number, so any term that didn't match a text field threw a `TypeError` and the results stopped updating. Matching a budget as text doesn't make sense anyway, so I removed it.
+- **Reset now clears the input**, not just the results. The input was uncontrolled, so the old term stayed in the box. It's now a controlled input driven by React state.
+- **Fixed invalid table markup and missing `key` props.** Header cells weren't wrapped in a `<tr>`, which is invalid HTML and causes hydration warnings. I also removed leftover `console.log` calls. With these fixes, the project passes type checking and linting for the first time, so CI is green.
+
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
