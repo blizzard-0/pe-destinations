@@ -238,6 +238,12 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Split the page into components and hooks.** `page.tsx` is now a server component, and only the interactive part (`DestinationSearch`) is a client component, so less JavaScript ships to the browser. The table is a presentational component that only renders the rows it's given.
 - **Data fetching lives in a `useDestinations` hook** that takes a query string and handles cancellation, status, and retries. Debouncing is a separate, reusable `useDebouncedValue` hook. Each piece has one job, and adding filters only means building a different query string.
 
+### URL state
+
+- **The current query lives in the URL** (`/?q=bali`), so results survive a refresh and can be bookmarked or shared. The page reads the initial query from `searchParams` on the server and passes it to the client component, so the search box is already filled in the first HTML.
+- **The URL is updated with `history.replaceState`**, which Next.js 14.2 keeps in sync with its router without a server round trip. I used replace rather than push, so typing doesn't add a history entry for every search. The tradeoff is that the Back button leaves the page instead of undoing the last change.
+- **Debouncing moved from the value to the update.** Once the search had to update shared query state, debouncing the update inside the input handler was simpler than copying a debounced value into the query with an effect, which also caused a race with Reset. I removed the `useDebouncedValue` hook.
+
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
