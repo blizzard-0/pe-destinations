@@ -151,6 +151,12 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Replaced `POST /api/seed` with an `npm run seed` script.** The endpoint deleted every row without authentication and would have been reachable in production. Seeding is a developer task, so it now runs from the command line, like migrations. The script upserts on `(name, country)`, so it's safe to run any number of times and updates existing rows instead of wiping the table. It doesn't remove destinations that were deleted from the seed file, which is fine for development data.
 - **TypeScript scripts run through `tsx`**, loaded with `node --import tsx`. Node itself still handles `--env-file-if-exists`, the same way as in the migration script.
 
+### API
+
+- **Query parameters are validated with Zod** before anything touches the database. Invalid input (`page=abc`, `costLevel=Cheap`, `pageSize=1000`, a `minBudget` above `maxBudget`) gets a `400` with a clear message instead of being silently ignored. Empty parameters such as `?region=` are treated as not sent, since that's what a cleared filter in the UI produces. `pageSize` is capped at 50 so a single request can't ask for the whole table.
+- **Allowed `costLevel` values come from the Drizzle enum**, so the database, the types, and the validation can't drift apart.
+- **Validation lives in its own module (`params.ts`) with unit tests.** These are the project's first tests, so `--passWithNoTests` is gone.
+
 ## Section 3: User Interface
 
 ## Tradeoffs & Deliberate Omissions
