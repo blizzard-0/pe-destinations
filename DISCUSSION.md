@@ -233,6 +233,11 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Errors show a friendly message with a "Try again" button.** The technical details go to the console; in production I'd send them to an error tracker such as Sentry.
 - **Status messages use `role="status"` and `role="alert"`**, so screen readers announce them when they appear.
 
+### Structure
+
+- **Split the page into components and hooks.** `page.tsx` is now a server component, and only the interactive part (`DestinationSearch`) is a client component, so less JavaScript ships to the browser. The table is a presentational component that only renders the rows it's given.
+- **Data fetching lives in a `useDestinations` hook** that takes a query string and handles cancellation, status, and retries. Debouncing is a separate, reusable `useDebouncedValue` hook. Each piece has one job, and adding filters only means building a different query string.
+
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
