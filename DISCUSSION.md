@@ -125,7 +125,10 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 ### Database tooling
 
 - **Typed the Drizzle config with `defineConfig`**, so typos in config keys are caught by TypeScript instead of failing silently. I also set the migrations folder (`out`) explicitly, since `migrate.js` depends on it.
+
 - **The config fails fast when `DATABASE_URL` is missing**, with an error message that says how to fix it, rather than passing `undefined` along and failing later with a confusing error.
+
+- **The migration script no longer logs `DATABASE_URL`.** It was printing the full connection string, password included, which ends up in log aggregators in production. The script also couldn't read `.env`, because plain `node` doesn't load it. It now uses Node's built-in `--env-file-if-exists`, which loads `.env` locally and is a no-op in CI and production, where variables come from the environment. No `dotenv` dependency needed.
 
 ### Schema
 
