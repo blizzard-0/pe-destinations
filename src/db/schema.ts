@@ -7,6 +7,7 @@ import {
   timestamp,
   bigint,
   unique,
+  index,
 } from "drizzle-orm/pg-core";
 
 const costLevelEnum = pgEnum("cost_level", [
@@ -35,6 +36,14 @@ const destinations = pgTable(
     nameCountryUnique: unique("destinations_name_country_unique").on(
       table.name,
       table.country,
+    ),
+    regionIdx: index("destinations_region_idx").on(table.region),
+    averageDailyBudgetIdx: index("destinations_average_daily_budget_idx").on(
+      table.averageDailyBudget,
+    ),
+    activitiesIdx: index("destinations_activities_idx").using(
+      "gin",
+      table.activities,
     ),
   }),
 );
