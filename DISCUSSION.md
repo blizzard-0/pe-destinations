@@ -2,7 +2,12 @@
 
 ## Overview
 
-_To be written once all sections are complete._
+I worked through the three sections in order, on one branch per section (`section-1-project-setup`, `section-2-database-api`, `section-3-ui`), each building on the previous one. Commits are small and focused, so the history reads as a step-by-step walkthrough. The sections below explain what I changed and why, in the same order.
+
+- **Section 1:** a local Postgres database in Docker, environment variables, a pinned Node version, Prettier, ESLint, type checking, Vitest, and GitHub Actions CI.
+- **Section 2:** a typed schema with an enum, an array column, constraints, and indexes; real migrations; an idempotent seed script in place of an unauthenticated endpoint; and an API that validates its input and searches, filters, sorts, and paginates in the database.
+- **Section 3:** fixed the XSS vulnerability, the search crash, and the invalid markup; moved search to the API; added filters, sorting, and pagination that live in the URL; and added loading, error, and empty states with accessible, responsive markup.
+- **Result:** the project now passes formatting, linting, type checking, tests, and a production build, and CI runs all of them.
 
 ## Running Locally
 
@@ -212,9 +217,72 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 ## Section 3: User Interface
 
+### Bug fixes
+
+- **Typed the page with the API's response types.** `useState([])` was inferred as `never[]`, which caused most of the type errors and hid the real ones. With the state typed, TypeScript pointed straight at the actual bugs below. The page imports the types with `import type`, so no server code ends up in the browser bundle.
+- **Removed an XSS vulnerability.** The search term was written into the page with `innerHTML`, so typing `<img src=x onerror=alert(1)>` ran JavaScript. It's now rendered as React text, which is escaped automatically. This matters even more once the search term lives in the URL, where it could be sent to someone else as a link.
+- **Fixed search breaking on most terms.** The filter called `.includes()` on `averageDailyBudget`, which is a number, so any term that didn't match a text field threw a `TypeError` and the results stopped updating. Matching a budget as text doesn't make sense anyway, so I removed it.
+- **Reset now clears the input**, not just the results. The input was uncontrolled, so the old term stayed in the box. It's now a controlled input driven by React state.
+- **Fixed invalid table markup and missing `key` props.** Header cells weren't wrapped in a `<tr>`, which is invalid HTML and causes hydration warnings. I also removed leftover `console.log` calls. With these fixes, the project passes type checking and linting for the first time, so CI is green.
+
+### Search
+
+- **Search runs on the server through the API** instead of filtering a full copy of the data in the browser. It's now case-insensitive and matches partial activity names (`surf` finds "Surfing"), and the browser only downloads the results it shows. There's also a single search implementation, so the page and the API can't disagree.
+- **Requests are debounced by 300 ms**, so typing "barcelona" sends one request instead of nine. The initial load and Reset aren't delayed.
+- **Outdated requests are cancelled with `AbortController`.** Without this, a slow response for an earlier term could arrive after a newer one and replace the results with the wrong list.
+
+### Loading, error, and empty states
+
+- **The page now tells users what's happening.** Before, a slow request, a failed request, and a search with no results all looked the same: an empty table. A failed request also left an unhandled promise rejection.
+- **Previous results stay on screen while a new search loads**, so the table doesn't flash empty on every search.
+- **Errors show a friendly message with a "Try again" button.** The technical details go to the console; in production I'd send them to an error tracker such as Sentry.
+- **Status messages use `role="status"` and `role="alert"`**, so screen readers announce them when they appear.
+
+### Structure
+
+- **Split the page into components and hooks.** `page.tsx` is now a server component, and only the interactive part (`DestinationSearch`) is a client component, so less JavaScript ships to the browser. The table is a presentational component that only renders the rows it's given.
+- **Data fetching lives in a `useDestinations` hook** that takes a query string and handles cancellation, status, and retries. Debouncing is a separate, reusable `useDebouncedValue` hook. Each piece has one job, and adding filters only means building a different query string.
+
+### URL state
+
+- **The current query lives in the URL** (`/?q=bali`), so results survive a refresh and can be bookmarked or shared. The page reads the initial query from `searchParams` on the server and passes it to the client component, so the search box is already filled in the first HTML.
+- **The URL is updated with `history.replaceState`**, which Next.js 14.2 keeps in sync with its router without a server round trip. I used replace rather than push, so typing doesn't add a history entry for every search. The tradeoff is that the Back button leaves the page instead of undoing the last change.
+- **Debouncing moved from the value to the update.** Once the search had to update shared query state, debouncing the update inside the input handler was simpler than copying a debounced value into the query with an effect, which also caused a race with Reset. I removed the `useDebouncedValue` hook.
+
+### Filters
+
+- **Added region and cost level filters**, combined with the search using AND and stored in the URL like the search. The options come from the source of truth: regions are loaded from the database in the server component, and cost levels come from the Drizzle enum, so a new region or level shows up without a code change.
+- **If loading regions fails, the page still renders** without region options, and the results area shows its own error with a retry button. A secondary dropdown shouldn't take down the whole page.
+- **The filter bar is an accessible form.** Every control has a visible label, the form is a `search` landmark, and pressing Enter doesn't reload the page. The loading message is an always-present live region with a fixed height, so screen readers announce it reliably and the table doesn't jump.
+- **"Clear filters" is disabled when there's nothing to clear**, including while a search is still being typed but not yet applied. It stays in place rather than disappearing, so the form doesn't shift.
+- **New UI is styled with Tailwind**, which was already installed but unused, instead of inline styles.
+
+### Sorting and pagination
+
+- **Sorting is a single dropdown** with options like "Daily budget (high to low)" instead of separate field and direction controls. It's easier to scan and maps directly onto the API's `sort` and `order` parameters. Sorting by cost level follows the enum order, from Budget to Luxury.
+- **Pagination uses Previous and Next buttons with "Showing 1–20 of 45"**, based on the `total` and `totalPages` the API returns. Changing the search, a filter, or the sort goes back to page 1. Default values (page 1, name A–Z) are left out of the URL to keep it short.
+- **Users can choose 10, 20, or 50 results per page**, matching the API's cap of 50. With only 15 seeded destinations, the default of 20 fits on one page, so this is also the easiest way to see pagination working. The selected value comes from the API response rather than a default hard-coded in the UI.
+- **A page past the end of the results**, such as an old link after the data changed, shows a link back to the first page instead of claiming that nothing matches.
+
+### Results table
+
+- **Numbers are formatted for reading.** Budgets show as currency (`$180`) and visitor counts with thousands separators (`5,300,000`). Both are right-aligned with tabular figures, so digits line up for comparison. The formatters use a fixed `en-US` locale to match the USD amounts and keep server and browser output identical, and they have unit tests.
+- **The table is semantic and accessible.** It has a caption for screen readers, header cells use `scope`, and each destination's name is the row header, so assistive technology can tell which destination and column a cell belongs to. Activities are a real list instead of stacked `div`s.
+- **The table scrolls horizontally on small screens** instead of stretching the whole page.
+- **Replaced the template's placeholder page title and description.**
+
+### Continuous integration
+
+- **CI now runs `next build`**, which I deferred in Section 1. A type check doesn't catch everything the build does, such as a page that fails while Next.js collects page data, and the build is the closest check to a real deployment.
+- **The build step gets a placeholder `DATABASE_URL`.** The page and the API import the database module, which throws when the variable is missing. `postgres.js` only connects on the first query and both routes are dynamic, so the build never touches a database. I confirmed this by building a clean checkout with a URL that points at nothing. The value isn't secret, so it lives in the workflow file rather than in CI secrets.
+
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
+- **The UI fetches results from the API in the browser instead of querying the database in a server component.** A server component could render the first page of results on the server, but going through the API keeps a single query implementation with its validation, and filtering doesn't need a server render on every change. The page itself is still a server component, and only the interactive part runs in the browser.
+- **Activity and budget filters exist in the API but not in the UI.** I prioritized search, region, cost level, sorting, and pagination. The API already validates `activity`, `minBudget`, and `maxBudget`, and the matching columns are indexed, so adding them is mostly form work.
+- **The Back button doesn't step through filter changes**, because the URL is updated with `replaceState` (see _URL state_ above).
+- **There are no component or end-to-end tests.** Unit tests cover parameter validation, query building, and number formatting. I checked the UI by hand, including the loading, error, empty, and past-the-end states.
 
 ## What I'd Do With More Time
 
@@ -224,3 +292,4 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Add a production `Dockerfile`** using Next.js standalone output and a multi-stage build, to produce a small image for deployment.
 - **Add integration tests for the API against a real Postgres database**, run in CI with a Postgres service container. The unit tests check the SQL conditions and parameters the API generates, and I tested the endpoint manually, but only a real database proves the queries return the right rows.
 - **Publish an OpenAPI spec for the API**, viewable with Swagger UI or a similar tool. I'd generate it from the Zod schema that already validates the parameters, so the documentation can't drift from the actual behavior the way the hand-written table in this document can.
+- **Add component and end-to-end tests** with React Testing Library and Playwright, covering the filter, URL, and error flows that I currently check by hand.

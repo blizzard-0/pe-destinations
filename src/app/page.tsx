@@ -1,91 +1,47 @@
-"use client";
+import { DestinationSearch } from "@/components/destination-search";
+import db from "@/db";
+import { costLevelEnum, destinations } from "@/db/schema";
 
-import { useEffect, useState } from "react";
+type HomeProps = {
+  searchParams: Record<string, string | string[] | undefined>;
+};
 
-export default function Home() {
-  const [destinations, setDestinations] = useState([]);
-  const [filteredDestinations, setFilteredDestinations] = useState([]);
+// The region filter is optional, so the page still renders without it if this fails.
+const loadRegions = async () => {
+  try {
+    const rows = await db
+      .selectDistinct({ region: destinations.region })
+      .from(destinations)
+      .orderBy(destinations.region);
 
-  useEffect(() => {
-    console.log("fetching destinations...");
-    fetch("/api/destinations").then((response) => {
-      response.json().then((jsonResponse) => {
-        setDestinations(jsonResponse.data);
-        setFilteredDestinations(jsonResponse.data);
-      });
-    });
-  }, []);
+    return rows.map((row) => row.region);
+  } catch (error) {
+    console.error("Failed to load regions", error);
+    return [];
+  }
+};
 
-  const onChange = (e) => {
-    const searchTerm = e.target.value;
+export default async function Home({ searchParams }: HomeProps) {
+  // Start from the query in the URL, so refreshes and shared links keep it.
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (typeof value === "string") {
+      params.set(key, value);
+    }
+  }
 
-    document.getElementById("search-term").innerHTML = searchTerm;
-
-    console.log("filtering destinations...");
-    const filteredDestinations = destinations.filter((destination) => {
-      return (
-        destination.name.includes(searchTerm) ||
-        destination.country.includes(searchTerm) ||
-        destination.region.includes(searchTerm) ||
-        destination.costLevel.includes(searchTerm) ||
-        destination.activities.includes(searchTerm) ||
-        destination.averageDailyBudget.includes(searchTerm)
-      );
-    });
-
-    setFilteredDestinations(filteredDestinations);
-  };
-
-  const onClick = () => {
-    console.log(destinations);
-    setFilteredDestinations(destinations);
-  };
+  const regions = await loadRegions();
 
   return (
-    <main style={{ margin: "24px" }}>
-      <h1>Project Expedition Destinations</h1>
-      <br />
-      <br />
-      <div>
-        <p>Search</p>
-        <p>
-          Searching for: <span id="search-term"></span>
-        </p>
-        <input style={{ border: "1px solid black" }} onChange={onChange} />
-        <button onClick={onClick}>Reset Search</button>
-      </div>
-      <br />
-      <br />
-      <table>
-        <thead>
-          <th>Name</th>
-          <th>Country</th>
-          <th>Region</th>
-          <th>Cost Level</th>
-          <th>Activities</th>
-          <th>Avg. Daily Budget</th>
-          <th>Annual Visitors</th>
-        </thead>
-        <tbody>
-          {filteredDestinations.map((destination) => {
-            return (
-              <tr>
-                <td>{destination.name}</td>
-                <td>{destination.country}</td>
-                <td>{destination.region}</td>
-                <td>{destination.costLevel}</td>
-                <td>
-                  {destination.activities.map((a) => (
-                    <div>{a}</div>
-                  ))}
-                </td>
-                <td>{destination.averageDailyBudget}</td>
-                <td>{destination.annualVisitors}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <main className="mx-auto max-w-6xl px-4 py-8">
+      <h1 className="mb-6 text-2xl font-semibold">
+        Project Expedition Destinations
+      </h1>
+      <DestinationSearch
+        initialQueryString={params.toString()}
+        regions={regions}
+        costLevels={costLevelEnum.enumValues}
+      />
     </main>
   );
 }
