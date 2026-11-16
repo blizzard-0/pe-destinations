@@ -40,6 +40,45 @@ npm run dev             # http://localhost:3000
 | `npm run migrate:up`   | Apply pending migrations                  |
 | `npm run seed`         | Load sample destinations (safe to re-run) |
 
+### API
+
+`GET /api/destinations` returns destinations from the database. All parameters are optional.
+
+| Parameter                | Description                                                      | Default |
+| ------------------------ | ---------------------------------------------------------------- | ------- |
+| `q`                      | Case-insensitive search in name, country, region, and activities |         |
+| `region`                 | Exact region, e.g. `Asia`                                        |         |
+| `costLevel`              | `Budget`, `Moderate`, `Premium`, or `Luxury`                     |         |
+| `activity`               | Exact activity, e.g. `Cultural Tours`                            |         |
+| `minBudget`, `maxBudget` | Average daily budget range in USD (whole numbers)                |         |
+| `sort`                   | `name`, `budget`, `visitors`, or `costLevel`                     | `name`  |
+| `order`                  | `asc` or `desc`                                                  | `asc`   |
+| `page`                   | Page number, starting at 1                                       | `1`     |
+| `pageSize`               | Results per page, up to 50                                       | `20`    |
+
+Example: `/api/destinations?region=Asia&sort=budget&order=desc&pageSize=5`
+
+```json
+{
+  "data": [
+    {
+      "id": 2,
+      "name": "Kyoto",
+      "country": "Japan",
+      "region": "Asia",
+      "costLevel": "Moderate",
+      "activities": ["Cultural Tours", "Historical Sightseeing"],
+      "averageDailyBudget": 180,
+      "annualVisitors": 5300000,
+      "createdAt": "2026-11-16T10:00:00.000Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 5, "total": 3, "totalPages": 1 }
+}
+```
+
+Invalid parameters return `400` with `{ "error": { "message": "...", "issues": [{ "path": "...", "message": "..." }] } }`. Unexpected errors return `500` with a generic message.
+
 ## Initial Assessment
 
 I started by reading through the whole codebase and running a type check before changing anything. I grouped the issues by impact, so the most serious problems get fixed first and the rest can be scoped to the time available.
@@ -183,3 +222,4 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Upgrade Drizzle** to a version whose migration generator supports check constraints, and move numeric validation (non-negative budget and visitor counts) into the database.
 - **Upgrade to ESLint 9.** ESLint 8 is no longer supported, but moving to ESLint 9 means rewriting the config in the new flat config format.
 - **Add a production `Dockerfile`** using Next.js standalone output and a multi-stage build, to produce a small image for deployment.
+- **Add integration tests for the API against a real Postgres database**, run in CI with a Postgres service container. The unit tests check the SQL conditions and parameters the API generates, and I tested the endpoint manually, but only a real database proves the queries return the right rows.
