@@ -133,6 +133,9 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 
 - **The migration script no longer logs `DATABASE_URL`.** It was printing the full connection string, password included, which ends up in log aggregators in production. The script also couldn't read `.env`, because plain `node` doesn't load it. It now uses Node's built-in `--env-file-if-exists`, which loads `.env` locally and is a no-op in CI and production, where variables come from the environment. No `dotenv` dependency needed.
 
+- **Removed the fake database client.** When `DATABASE_URL` was missing, `db/index.ts` returned a stub that answered every query with an empty array, so the app looked like it simply had no destinations instead of failing. It now throws on startup with a clear message, the same way the Drizzle config and migration script do. This also fixed two type errors, since `db` is no longer a union with the stub.
+- **Reused the connection pool across hot reloads.** In development, Next.js re-runs modules on every save, and each run opened a new connection pool without closing the old one, which eventually hits Postgres's connection limit. The pool is now cached on `globalThis` in development.
+
 ### Schema
 
 - **`cost_level` is a Postgres enum** (`Budget`, `Moderate`, `Premium`, `Luxury`) instead of free text. The database now rejects typos and unknown values, which would otherwise silently drop out of filters. Enum values also sort in the order they're declared, so sorting by cost goes from cheapest to most expensive instead of alphabetically. Tradeoff: adding a new level requires a migration, which is acceptable since cost tiers rarely change.
