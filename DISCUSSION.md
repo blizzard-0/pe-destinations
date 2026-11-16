@@ -226,6 +226,13 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Requests are debounced by 300 ms**, so typing "barcelona" sends one request instead of nine. The initial load and Reset aren't delayed.
 - **Outdated requests are cancelled with `AbortController`.** Without this, a slow response for an earlier term could arrive after a newer one and replace the results with the wrong list.
 
+### Loading, error, and empty states
+
+- **The page now tells users what's happening.** Before, a slow request, a failed request, and a search with no results all looked the same: an empty table. A failed request also left an unhandled promise rejection.
+- **Previous results stay on screen while a new search loads**, so the table doesn't flash empty on every search.
+- **Errors show a friendly message with a "Try again" button.** The technical details go to the console; in production I'd send them to an error tracker such as Sentry.
+- **Status messages use `role="status"` and `role="alert"`**, so screen readers announce them when they appear.
+
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
