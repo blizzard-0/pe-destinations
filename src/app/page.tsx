@@ -2,43 +2,61 @@
 
 import { useEffect, useState, type ChangeEvent } from "react";
 
-import type { DestinationJson } from "@/app/api/destinations/types";
+import type {
+  DestinationJson,
+  DestinationsResponse,
+} from "@/app/api/destinations/types";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function Home() {
   const [destinations, setDestinations] = useState<DestinationJson[]>([]);
-  const [filteredDestinations, setFilteredDestinations] = useState<
-    DestinationJson[]
-  >([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    fetch("/api/destinations").then((response) => {
-      response.json().then((jsonResponse) => {
-        setDestinations(jsonResponse.data);
-        setFilteredDestinations(jsonResponse.data);
-      });
-    });
-  }, []);
+    const controller = new AbortController();
+    const q = searchTerm.trim();
+
+    // Wait until the user stops typing, but load the full list right away.
+    const timeout = setTimeout(
+      async () => {
+        const params = new URLSearchParams();
+        if (q) {
+          params.set("q", q);
+        }
+
+        try {
+          const response = await fetch(`/api/destinations?${params}`, {
+            signal: controller.signal,
+          });
+          if (!response.ok) {
+            throw new Error(`Request failed with status ${response.status}`);
+          }
+
+          const body: DestinationsResponse = await response.json();
+          setDestinations(body.data);
+        } catch (error) {
+          // A newer search cancelled this request, so its result no longer matters.
+          if (!controller.signal.aborted) {
+            console.error(error);
+          }
+        }
+      },
+      q ? SEARCH_DEBOUNCE_MS : 0,
+    );
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [searchTerm]);
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-
-    setFilteredDestinations(
-      destinations.filter(
-        (destination) =>
-          destination.name.includes(term) ||
-          destination.country.includes(term) ||
-          destination.region.includes(term) ||
-          destination.costLevel.includes(term) ||
-          destination.activities.includes(term),
-      ),
-    );
+    setSearchTerm(e.target.value);
   };
 
   const onReset = () => {
     setSearchTerm("");
-    setFilteredDestinations(destinations);
   };
 
   return (
@@ -58,7 +76,6 @@ export default function Home() {
         />
         <button onClick={onReset}>Reset Search</button>
       </div>
-
       <br />
       <br />
       <table>
@@ -74,7 +91,7 @@ export default function Home() {
           </tr>
         </thead>
         <tbody>
-          {filteredDestinations.map((destination) => (
+          {destinations.map((destination) => (
             <tr key={destination.id}>
               <td>{destination.name}</td>
               <td>{destination.country}</td>
