@@ -39,4 +39,8 @@ const destinations = pgTable(
   }),
 );
 
+type Destination = typeof destinations.$inferSelect;
+type NewDestination = typeof destinations.$inferInsert;
+
 export { costLevelEnum, destinations };
+export type { Destination, NewDestination };
