@@ -244,6 +244,13 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **The URL is updated with `history.replaceState`**, which Next.js 14.2 keeps in sync with its router without a server round trip. I used replace rather than push, so typing doesn't add a history entry for every search. The tradeoff is that the Back button leaves the page instead of undoing the last change.
 - **Debouncing moved from the value to the update.** Once the search had to update shared query state, debouncing the update inside the input handler was simpler than copying a debounced value into the query with an effect, which also caused a race with Reset. I removed the `useDebouncedValue` hook.
 
+### Filters
+
+- **Added region and cost level filters**, combined with the search using AND and stored in the URL like the search. The options come from the source of truth: regions are loaded from the database in the server component, and cost levels come from the Drizzle enum, so a new region or level shows up without a code change.
+- **If loading regions fails, the page still renders** without region options, and the results area shows its own error with a retry button. A secondary dropdown shouldn't take down the whole page.
+- **The filter bar is an accessible form.** Every control has a visible label, the form is a `search` landmark, and pressing Enter doesn't reload the page. The loading message is an always-present live region with a fixed height, so screen readers announce it reliably and the table doesn't jump.
+- **New UI is styled with Tailwind**, which was already installed but unused, instead of inline styles.
+
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
