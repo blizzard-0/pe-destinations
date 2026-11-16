@@ -1,8 +1,10 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
 
 import { DestinationFilters } from "@/components/destination-filters";
 import { DestinationsTable } from "@/components/destinations-table";
+import { Pagination } from "@/components/pagination";
 import { useDestinations } from "@/hooks/use-destinations";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -25,8 +27,18 @@ const DestinationSearch = ({
   );
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
-  const { destinations, status, retry } = useDestinations(queryString);
+  const { destinations, pagination, status, retry } =
+    useDestinations(queryString);
   const currentParams = new URLSearchParams(queryString);
+  const sortParam = currentParams.get("sort");
+  const sortValue = sortParam
+    ? `${sortParam}-${currentParams.get("order") ?? "asc"}`
+    : "";
+  const isPastLastPage =
+    status === "success" &&
+    destinations.length === 0 &&
+    pagination !== null &&
+    pagination.total > 0;
 
   // Mirror the query in the URL, so results can be refreshed and shared.
   useEffect(() => {
@@ -65,6 +77,16 @@ const DestinationSearch = ({
     );
   };
 
+  const onSortChange = (value: string) => {
+    const [sort = "", order = ""] = value.split("-");
+    updateQuery({ sort, order });
+  };
+
+  // Page 1 is the default, so it's left out of the URL.
+  const onPageChange = (page: number) => {
+    updateQuery({ page: page > 1 ? String(page) : "" });
+  };
+
   const onReset = () => {
     clearTimeout(searchTimeout.current);
     setSearchTerm("");
@@ -77,10 +99,12 @@ const DestinationSearch = ({
         searchTerm={searchTerm}
         region={currentParams.get("region") ?? ""}
         costLevel={currentParams.get("costLevel") ?? ""}
+        sort={sortValue}
         regions={regions}
         costLevels={costLevels}
         onSearchChange={onSearchChange}
         onFilterChange={(name, value) => updateQuery({ [name]: value })}
+        onSortChange={onSortChange}
         onReset={onReset}
       />
 
@@ -104,7 +128,7 @@ const DestinationSearch = ({
         </div>
       )}
 
-      {status === "success" && destinations.length === 0 && (
+      {status === "success" && pagination?.total === 0 && (
         <p className="text-sm text-gray-500">
           {queryString
             ? "No destinations match your filters."
@@ -112,8 +136,26 @@ const DestinationSearch = ({
         </p>
       )}
 
+      {isPastLastPage && (
+        <p className="text-sm text-gray-500">
+          This page is past the end of the results.{" "}
+          <button
+            type="button"
+            onClick={() => onPageChange(1)}
+            className="font-medium underline"
+          >
+            Go to the first page
+          </button>
+        </p>
+      )}
+
       {status !== "error" && destinations.length > 0 && (
-        <DestinationsTable destinations={destinations} />
+        <>
+          <DestinationsTable destinations={destinations} />
+          {pagination && (
+            <Pagination pagination={pagination} onPageChange={onPageChange} />
+          )}
+        </>
       )}
     </div>
   );

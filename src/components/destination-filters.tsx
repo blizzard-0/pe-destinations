@@ -1,13 +1,27 @@
 type FilterName = "region" | "costLevel";
 
+// An empty value means the API default (name, A–Z), which keeps the URL clean.
+const SORT_OPTIONS = [
+  { value: "", label: "Name (A–Z)" },
+  { value: "name-desc", label: "Name (Z–A)" },
+  { value: "budget-asc", label: "Daily budget (low to high)" },
+  { value: "budget-desc", label: "Daily budget (high to low)" },
+  { value: "costLevel-asc", label: "Cost level (low to high)" },
+  { value: "costLevel-desc", label: "Cost level (high to low)" },
+  { value: "visitors-desc", label: "Most visited" },
+  { value: "visitors-asc", label: "Least visited" },
+];
+
 type DestinationFiltersProps = {
   searchTerm: string;
   region: string;
   costLevel: string;
+  sort: string;
   regions: string[];
   costLevels: readonly string[];
   onSearchChange: (value: string) => void;
   onFilterChange: (name: FilterName, value: string) => void;
+  onSortChange: (value: string) => void;
   onReset: () => void;
 };
 
@@ -19,10 +33,12 @@ const DestinationFilters = ({
   searchTerm,
   region,
   costLevel,
+  sort,
   regions,
   costLevels,
   onSearchChange,
   onFilterChange,
+  onSortChange,
   onReset,
 }: DestinationFiltersProps) => (
   <form
@@ -77,6 +93,24 @@ const DestinationFilters = ({
         {costLevels.map((level) => (
           <option key={level} value={level}>
             {level}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <div className="flex flex-col gap-1">
+      <label htmlFor="sort" className={labelClass}>
+        Sort by
+      </label>
+      <select
+        id="sort"
+        className={controlClass}
+        value={sort}
+        onChange={(e) => onSortChange(e.target.value)}
+      >
+        {SORT_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
           </option>
         ))}
       </select>
