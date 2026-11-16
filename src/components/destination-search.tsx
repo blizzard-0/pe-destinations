@@ -110,6 +110,7 @@ const DestinationSearch = ({
         onFilterChange={(name, value) => updateQuery({ [name]: value })}
         onSortChange={onSortChange}
         onReset={onReset}
+        canReset={queryString !== "" || searchTerm !== ""}
       />
 
       <p role="status" className="h-5 text-sm text-gray-500">

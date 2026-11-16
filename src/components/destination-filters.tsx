@@ -23,6 +23,7 @@ type DestinationFiltersProps = {
   onFilterChange: (name: FilterName, value: string) => void;
   onSortChange: (value: string) => void;
   onReset: () => void;
+  canReset: boolean;
 };
 
 const labelClass = "text-sm font-medium text-gray-700";
@@ -40,6 +41,7 @@ const DestinationFilters = ({
   onFilterChange,
   onSortChange,
   onReset,
+  canReset,
 }: DestinationFiltersProps) => (
   <form
     role="search"
@@ -119,7 +121,8 @@ const DestinationFilters = ({
     <button
       type="button"
       onClick={onReset}
-      className="rounded-md border border-gray-300 px-4 py-2 text-sm hover:bg-gray-100"
+      disabled={!canReset}
+      className="rounded-md border border-gray-300 px-4 py-2 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
     >
       Clear filters
     </button>
