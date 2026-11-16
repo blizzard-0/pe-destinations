@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
+
+import type { DestinationJson } from "@/app/api/destinations/types";
 
 export default function Home() {
-  const [destinations, setDestinations] = useState([]);
-  const [filteredDestinations, setFilteredDestinations] = useState([]);
+  const [destinations, setDestinations] = useState<DestinationJson[]>([]);
+  const [filteredDestinations, setFilteredDestinations] = useState<
+    DestinationJson[]
+  >([]);
 
   useEffect(() => {
     console.log("fetching destinations...");
@@ -16,7 +20,7 @@ export default function Home() {
     });
   }, []);
 
-  const onChange = (e) => {
+  const onChange = (e: ChangeEvent<HTMLInputElement>) => {
     const searchTerm = e.target.value;
 
     document.getElementById("search-term").innerHTML = searchTerm;
