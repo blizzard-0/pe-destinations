@@ -279,6 +279,10 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
+- **The UI fetches results from the API in the browser instead of querying the database in a server component.** A server component could render the first page of results on the server, but going through the API keeps a single query implementation with its validation, and filtering doesn't need a server render on every change. The page itself is still a server component, and only the interactive part runs in the browser.
+- **Activity and budget filters exist in the API but not in the UI.** I prioritized search, region, cost level, sorting, and pagination. The API already validates `activity`, `minBudget`, and `maxBudget`, and the matching columns are indexed, so adding them is mostly form work.
+- **The Back button doesn't step through filter changes**, because the URL is updated with `replaceState` (see _URL state_ above).
+- **There are no component or end-to-end tests.** Unit tests cover parameter validation, query building, and number formatting. I checked the UI by hand, including the loading, error, empty, and past-the-end states.
 
 ## What I'd Do With More Time
 
@@ -288,3 +292,4 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Add a production `Dockerfile`** using Next.js standalone output and a multi-stage build, to produce a small image for deployment.
 - **Add integration tests for the API against a real Postgres database**, run in CI with a Postgres service container. The unit tests check the SQL conditions and parameters the API generates, and I tested the endpoint manually, but only a real database proves the queries return the right rows.
 - **Publish an OpenAPI spec for the API**, viewable with Swagger UI or a similar tool. I'd generate it from the Zod schema that already validates the parameters, so the documentation can't drift from the actual behavior the way the hand-written table in this document can.
+- **Add component and end-to-end tests** with React Testing Library and Playwright, covering the filter, URL, and error flows that I currently check by hand.
