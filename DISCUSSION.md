@@ -258,6 +258,13 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Users can choose 10, 20, or 50 results per page**, matching the API's cap of 50. With only 15 seeded destinations, the default of 20 fits on one page, so this is also the easiest way to see pagination working. The selected value comes from the API response rather than a default hard-coded in the UI.
 - **A page past the end of the results**, such as an old link after the data changed, shows a link back to the first page instead of claiming that nothing matches.
 
+### Results table
+
+- **Numbers are formatted for reading.** Budgets show as currency (`$180`) and visitor counts with thousands separators (`5,300,000`). Both are right-aligned with tabular figures, so digits line up for comparison. The formatters use a fixed `en-US` locale to match the USD amounts and keep server and browser output identical, and they have unit tests.
+- **The table is semantic and accessible.** It has a caption for screen readers, header cells use `scope`, and each destination's name is the row header, so assistive technology can tell which destination and column a cell belongs to. Activities are a real list instead of stacked `div`s.
+- **The table scrolls horizontally on small screens** instead of stretching the whole page.
+- **Replaced the template's placeholder page title and description.**
+
 ## Tradeoffs & Deliberate Omissions
 
 - **Only the database runs in Docker, not the app.** Running the Next.js dev server in a container on Windows or macOS makes hot reload slow or unreliable, requires workarounds for platform-specific binaries in `node_modules`, and editor tooling still needs a local `node_modules` anyway. Containerizing dependencies while running the app natively is the common setup and keeps the development loop fast.
