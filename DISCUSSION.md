@@ -159,6 +159,10 @@ I'll work through the sections in order, fixing the P0 and P1 items in each one 
 - **Filtering and sorting happen in the database, not the browser.** The original page downloaded every destination and filtered in JavaScript, which doesn't scale. `q` is a case-insensitive search across name, country, region, and activities. The other filters are exact matches, combined with AND.
 - **Search input is escaped for `LIKE`.** `%` and `_` are wildcards in `ILIKE`, so searching for `%` would have matched everything. This isn't SQL injection (Drizzle sends values as parameters), but it's a correctness bug that's easy to miss.
 - **Sorting uses an allow-list of columns and always breaks ties by `id`**, so users can only sort by fields the API exposes, and paging through results never shows the same destination twice or skips one.
+- **The endpoint now reads from the database and returns `{ data, pagination }`.** The original route returned the hard-coded seed array, not the database. `pagination` includes `total` and `totalPages`, so the UI can render page controls without another request. The page of results and the total count run as two parallel queries with the same filters.
+- **Errors have a consistent shape.** Invalid parameters return `400` with a list of issues, so the client can show what's wrong. Unexpected failures return a generic `500`, and the details go to the server log instead of the response, because database errors can expose internal details.
+- **A page past the end returns `200` with an empty list, not `404`.** The request is valid; there are just no results on that page, the same as a filter that matches nothing.
+- **The route is explicitly `force-dynamic`.** In Next.js 14, a `GET` handler that doesn't read the request is cached at build time, so the original route would have served the same response forever. Reading the query string already opts out, but the explicit setting documents the intent and protects against that regression.
 
 ## Section 3: User Interface
 
